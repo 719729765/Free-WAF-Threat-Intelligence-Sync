@@ -1,3 +1,6 @@
+<img width="1185" height="860" alt="image" src="https://github.com/user-attachments/assets/89d1fb17-4f9e-4037-9da0-d74e0bc74740" />
+
+
 # Free WAF Threat Intelligence Sync 0.1.0
 
 旧版宝塔第三方免费 `free_waf` 的 IPv4 情报同步器。仅使用 Python 标准库，不安装 pip 依赖。默认命令为模拟模式；只有 `--apply` 才会写入 `ip_black.json` 并在 `nginx -t` 通过后执行平滑 reload。
