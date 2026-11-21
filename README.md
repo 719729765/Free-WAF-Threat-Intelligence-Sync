@@ -2,14 +2,6 @@
 
 适用于旧版宝塔第三方免费 `free_waf`，目标环境为 Debian / Ubuntu / 其他使用 systemd 的 Linux；要求 Python 3.6.8 或更高版本。安装程序会下载并校验 GitHub Release `v0.1.1`，不需要 pip 依赖。
 
-## 将脚本加入 GitHub 仓库
-
-把 `install.sh` 上传到仓库根目录：
-
-`https://github.com/719729765/Free-WAF-Threat-Intelligence-Sync`
-
-提交到 `main` 分支后，服务器即可使用下方一条命令安装。
-
 ## 一键安装并在检查通过后启用自动同步
 
 以 root 登录服务器执行：
