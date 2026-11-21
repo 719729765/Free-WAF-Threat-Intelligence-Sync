@@ -1,3 +1,7 @@
+<img width="1672" height="941" alt="image" src="https://github.com/user-attachments/assets/d30d5a62-81de-45e1-9171-b83e7f1decd4" />
+
+
+
 # Free WAF Threat Intelligence Sync 一键安装脚本
 
 适用于旧版宝塔第三方免费 `free_waf`，目标环境为 Debian / Ubuntu / 其他使用 systemd 的 Linux；要求 Python 3.6.8 或更高版本。安装程序会下载并校验 GitHub Release `v0.1.1`，不需要 pip 依赖。
