@@ -1,88 +1,72 @@
 <img width="1185" height="860" alt="image" src="https://github.com/user-attachments/assets/89d1fb17-4f9e-4037-9da0-d74e0bc74740" />
 
 
-# Free WAF Threat Intelligence Sync 0.1.0
+Free WAF Threat Intelligence Sync 一键安装脚本
+适用于旧版宝塔第三方免费 free_waf，目标环境为 Debian / Ubuntu / 其他使用 systemd 的 Linux；要求 Python 3.6.8 或更高版本。安装程序会下载并校验 GitHub Release v0.1.1，不需要 pip 依赖。
 
-旧版宝塔第三方免费 `free_waf` 的 IPv4 情报同步器。仅使用 Python 标准库，不安装 pip 依赖。默认命令为模拟模式；只有 `--apply` 才会写入 `ip_black.json` 并在 `nginx -t` 通过后执行平滑 reload。
+将脚本加入 GitHub 仓库
+把 install.sh 上传到仓库根目录：
 
-## 当前适配目标
+https://github.com/719729765/Free-WAF-Threat-Intelligence-Sync
 
-- 黑名单：`/www/server/free_waf/rule/ip_black.json`
-- 白名单：`/www/server/free_waf/rule/ip_white.json`（只读）
-- Lua 读取：`/www/server/free_waf/init.lua` 初始化阶段读入内存
-- JSON：`[[起始IPv4四字节数组, 结束IPv4四字节数组], ...]`
+提交到 main 分支后，服务器即可使用下方一条命令安装。
 
-## 情报源
+一键安装并在检查通过后启用自动同步
+以 root 登录服务器执行：
 
-- IPsum Level 4：IP 出现在至少 4 个公开名单；每天更新。
-- FireHOL Level 2：聚合近约 48 小时攻击名单，包含 Blocklist.de、DShield 1d、GreenSnow 等。
-- Feodo Tracker Recommended：恶意软件 C2 推荐名单（配置中默认关闭；本次核验到的名单时间戳较旧，确认上游恢复新鲜更新后再手动启用）。
-- Spamhaus DROP：高危恶意网段，使用官方 `drop_v4.json`，每天抓取一次。
+Bash
 
-默认不会使用 FireHOL Level 1，因为它含有大量特殊网段/全局网段，不适合直接导入逐条匹配的旧版 WAF。Feodo 当前默认关闭，避免依赖本次核验时显示旧时间戳的名单。
 
-## 安全策略
+curl -fsSL -o /root/install-free-waf.sh https://raw.githubusercontent.com/719729765/Free-WAF-Threat-Intelligence-Sync/main/install.sh && bash /root/install-free-waf.sh --yes
+脚本会：
 
-- 仅处理 IPv4；旧 WAF 的 `compare_ip()` 明确跳过 IPv6。
-- 只接受全局可路由 IPv4。
-- 默认拒绝宽于 `/20` 的网段，避免误封过大的地址块。
-- 外部名单与 WAF 白名单重叠的 IP 会被从外部名单中剔除。
-- 保留初始黑名单及之后在 WAF 文件中手工新增的记录；通过状态文件区分同步器规则与人工规则。
-- 只在 `--apply` 时写入；写入前备份；先 `nginx -t`，再 `nginx -s reload`；失败自动恢复。
-- 同步器有并发锁；下载失败时使用有效期内的旧缓存；必需源没有有效数据则拒绝应用。
-- 默认自动情报规则上限 25,000 条，防止旧 Lua 的 `ipairs()` 逐条匹配变得过重。
+检查 root、systemd、Python 3.6.8、宝塔 free_waf 黑白名单文件和 Nginx 路径。
+下载官方 v0.1.1 Release ZIP，并验证固定 SHA256。
+备份旧程序、配置和 systemd 单元文件。
+安装程序及 systemd 服务/定时器。
+已存在的 config.json、状态缓存、WAF 黑名单和白名单均予以保留；首次安装采用 IPsum Level 5 + Spamhaus 的保守预设，默认关闭 FireHOL Level 2。
+执行自检和模拟采集；模拟阶段不会修改 WAF。
+--yes 在自检及模拟通过后启用每 30 分钟运行的正式同步定时器。
+注意： 定时服务执行的是 --apply。开启后会根据情报更新 ip_black.json，并在名单确实变化、`nginx -t` 通过时平滑 reload Nginx。`ip_white.json` 始终只读。首次启动后，systemd 可能因 OnBootSec=5min 已到期而很快触发一次正式同步。
 
-这不是“全球所有攻击 IP”的完整名单；任何公开情报源都有覆盖范围和误报。应先运行模拟模式检查报告。
+交互式安装
+不带 --yes 时，安装器先运行模拟并显示采集结果，再询问是否开启自动同步：
 
-## 部署（Debian / Ubuntu / 宝塔）
+Bash
 
-以 root 执行：
 
-```bash
-mkdir -p /opt/free-waf-threat-sync /etc/free-waf-threat-sync
-```
+bash /root/install-free-waf.sh
+只安装和模拟、不启用自动任务：
 
-把 `free_waf_threat_sync.py` 上传到 `/opt/free-waf-threat-sync/`，把 `config.example.json` 上传到 `/etc/free-waf-threat-sync/config.json`，然后：
+Bash
 
-```bash
-chmod 750 /opt/free-waf-threat-sync/free_waf_threat_sync.py
-chmod 600 /etc/free-waf-threat-sync/config.json
-python3 /opt/free-waf-threat-sync/free_waf_threat_sync.py --self-test
-python3 /opt/free-waf-threat-sync/free_waf_threat_sync.py --config /etc/free-waf-threat-sync/config.json
-```
 
-最后一条是模拟运行，不会改动 WAF。
+bash /root/install-free-waf.sh --no-timer
+日常管理
+Bash
 
-确认预览报告符合预期后，手动正式应用：
 
-```bash
-python3 /opt/free-waf-threat-sync/free_waf_threat_sync.py --config /etc/free-waf-threat-sync/config.json --apply
-```
+# 状态与最近日志
+bash /root/install-free-waf.sh --status
 
-查看状态：
+# 开启自动同步（会启用正式 --apply 定时任务）
+bash /root/install-free-waf.sh --start
 
-```bash
-python3 /opt/free-waf-threat-sync/free_waf_threat_sync.py --config /etc/free-waf-threat-sync/config.json --status
-```
+# 停止并禁用自动同步（不会删除现有黑名单）
+bash /root/install-free-waf.sh --stop
 
-回滚到上一次同步前的黑名单：
-
-```bash
-python3 /opt/free-waf-threat-sync/free_waf_threat_sync.py --config /etc/free-waf-threat-sync/config.json --rollback
-```
-
-## 开启每 30 分钟自动同步（可选）
-
-把 `systemd/free-waf-threat-sync.service` 和 `.timer` 上传到 `/etc/systemd/system/`，然后：
-
-```bash
-systemctl daemon-reload
-systemctl enable --now free-waf-threat-sync.timer
-systemctl list-timers free-waf-threat-sync.timer
-journalctl -u free-waf-threat-sync.service -n 100 --no-pager
-```
-
-注意：自动任务会执行正式应用。建议先至少完成一次人工模拟和人工 `--apply`，确认运行正常后再启用 timer。
+# 只移除 systemd 自动任务；保留程序、配置、状态及备份
+bash /root/install-free-waf.sh --uninstall
+文件位置
+程序：`/opt/free-waf-threat-sync/free_waf_threat_sync.py`
+配置：`/etc/free-waf-threat-sync/config.json`
+状态：`/var/lib/free-waf-threat-sync/state.json`
+日志：`/var/log/free-waf-threat-sync/sync.log`
+systemd：`/etc/systemd/system/free-waf-threat-sync.service` 和 .timer
+安装前备份：`/var/backups/free-waf-threat-sync-installer/`
+WAF 黑名单：`/www/server/free_waf/rule/ip_black.json`
+WAF 白名单：`/www/server/free_waf/rule/ip_white.json`（只读）
+脚本不会覆盖已有配置，不会清空或重建现有黑名单，不会写入白名单。升级时会备份旧程序及 systemd 单元文件。
 
 ## 重要注意
 
